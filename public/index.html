@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Family Tree</title>
+  <meta name="description" content="Build your family tree and share it with relatives through their social sign-in." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">🌳 Family Tree</a>
+    <div id="user-chip" class="user-chip" hidden>
+      <img id="user-photo" alt="" referrerpolicy="no-referrer" />
+      <span id="user-name"></span>
+      <button id="sign-out" class="btn btn-ghost" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <div id="config-warning" class="banner warn" hidden>
+    Firebase is not configured yet. Edit <code>public/js/firebase-config.js</code> with your project's web config (see README).
+  </div>
+  <div id="message" class="banner" hidden></div>
+
+  <!-- Signed-out view -->
+  <main id="landing" class="landing">
+    <section class="hero">
+      <div class="hero-text">
+      <h1>Grow your family tree together</h1>
+      <p>
+        Add relatives with their name, email and social media accounts.
+        When someone you added signs in with a social account that uses the same email,
+        they can see the family tree they belong to.
+      </p>
+      </div>
+      <div class="card signin-card">
+        <h2>Sign in to continue</h2>
+        <p class="muted">You need to sign in with a social media account to add family members or view your tree.</p>
+        <div id="provider-buttons" class="provider-buttons"></div>
+      </div>
+    </section>
+    <section class="steps">
+      <div class="step"><span>1</span><h3>Sign in</h3><p>Use Google, Facebook, X or GitHub. No password to remember.</p></div>
+      <div class="step"><span>2</span><h3>Add family</h3><p>Add parents, children, spouses and siblings with their email and socials.</p></div>
+      <div class="step"><span>3</span><h3>They see it too</h3><p>Relatives who sign in with the email you entered get read-only access to the tree.</p></div>
+    </section>
+  </main>
+
+  <!-- Signed-in view -->
+  <main id="app" class="app" hidden>
+    <aside class="sidebar">
+      <h3>Trees</h3>
+      <nav id="tree-list" class="tree-list"></nav>
+      <p class="muted small" id="email-note"></p>
+    </aside>
+    <section class="workspace">
+      <div class="workspace-head">
+        <div>
+          <h2 id="tree-title">My family tree</h2>
+          <p id="tree-subtitle" class="muted"></p>
+        </div>
+        <div class="actions">
+          <button id="add-person" class="btn btn-primary" type="button">+ Add family member</button>
+        </div>
+      </div>
+      <div id="tree" class="tree-container" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- Add / edit person -->
+  <dialog id="person-dialog" class="dialog">
+    <form id="person-form" method="dialog">
+      <h2 id="person-dialog-title">Add family member</h2>
+      <label>Full name *
+        <input name="fullName" required maxlength="120" autocomplete="off" />
+      </label>
+      <label>Email
+        <input name="email" type="email" maxlength="254" autocomplete="off" placeholder="They sign in with this email to see the tree" />
+      </label>
+      <fieldset class="socials">
+        <legend>Social media accounts (username or profile link)</legend>
+        <div id="social-inputs" class="social-grid"></div>
+      </fieldset>
+      <fieldset id="relation-fields" class="relation">
+        <legend>Relationship</legend>
+        <div class="relation-row">
+          <select name="relation">
+            <option value="child">Child of</option>
+            <option value="parent">Parent of</option>
+            <option value="spouse">Spouse / partner of</option>
+            <option value="sibling">Sibling of</option>
+          </select>
+          <select name="relative" id="relative-select"></select>
+        </div>
+        <p class="muted small">Adding a child of someone with one spouse makes the spouse a parent too.</p>
+      </fieldset>
+      <p id="form-error" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="person-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Person details -->
+  <dialog id="details-dialog" class="dialog">
+    <div class="details">
+      <h2 id="details-name"></h2>
+      <p id="details-email"></p>
+      <ul id="details-socials" class="social-links"></ul>
+      <p id="details-relations" class="muted small"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-danger" id="details-delete">Delete</button>
+        <button type="button" class="btn btn-ghost" id="details-edit">Edit</button>
+        <button type="button" class="btn btn-primary" data-close>Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <noscript><p class="banner warn">This app needs JavaScript enabled.</p></noscript>
+</body>
+</html>
