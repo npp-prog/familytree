@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Data model
+//   trees/{ownerUid}                 one tree per signed-in user
+//     ownerUid, ownerName, memberEmails[] (lower-case emails of everyone in the tree)
+//   trees/{ownerUid}/people/{personId}
+//     name, email, socials{}, parentIds[], spouseIds[], isOwner
+//
+// - Only signed-in users can do anything.
+// - Only the owner can add / edit / delete people in their tree.
+// - Anyone whose sign-in email was added to a tree can view (read-only) that tree.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myEmail() {
+      return request.auth.token.email != null ? request.auth.token.email.lower() : '';
+    }
+
+    function isOwner(treeId) {
+      return signedIn() && request.auth.uid == treeId;
+    }
+
+    function isMember(treeId) {
+      return signedIn() && myEmail() != ''
+        && myEmail() in get(/databases/$(database)/documents/trees/$(treeId)).data.memberEmails;
+    }
+
+    function validTree() {
+      let d = request.resource.data;
+      return d.ownerUid == request.auth.uid
+        && d.memberEmails is list
+        && d.memberEmails.size() <= 1000;
+    }
+
+    function validPerson() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 120
+        && d.email is string && d.email.size() <= 254
+        && d.socials is map
+        && d.parentIds is list && d.parentIds.size() <= 2
+        && d.spouseIds is list && d.spouseIds.size() <= 10;
+    }
+
+    match /trees/{treeId} {
+      allow read: if isOwner(treeId)
+        || (signedIn() && myEmail() != '' && myEmail() in resource.data.memberEmails);
+      allow create, update: if isOwner(treeId) && validTree();
+      allow delete: if isOwner(treeId);
+
+      match /people/{personId} {
+        allow read: if isOwner(treeId) || isMember(treeId);
+        allow create, update: if isOwner(treeId) && validPerson();
+        allow delete: if isOwner(treeId);
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+node_modules/
+.netlify/
+.firebase/
+*.log
+.DS_Store
