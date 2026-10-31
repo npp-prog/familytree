@@ -136,6 +136,7 @@ h1, h2, h3 { line-height: 1.2; margin: 0 0 .5rem; }
   max-height: calc(100vh - 190px);
 }
 .tree-container .empty { padding: 2rem; color: var(--muted); }
+.tree-container .empty.error { color: var(--danger); max-width: 60ch; }
 .tree-stage { position: relative; margin: 0 auto; }
 .tree-lines { position: absolute; inset: 0; pointer-events: none; }
 .tree-lines path { fill: none; stroke: var(--line); stroke-width: 2; }

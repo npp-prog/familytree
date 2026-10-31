@@ -92,6 +92,36 @@ function friendlyAuthError(err) {
   }
 }
 
+function describeDataError(err) {
+  const code = (err && err.code) || "";
+  const msg = (err && err.message) || "";
+  if (code === "permission-denied" || /insufficient permissions/i.test(msg)) {
+    return "Firestore blocked the request. Publish the security rules from firestore.rules: Firebase console → Firestore Database → Rules → paste → Publish.";
+  }
+  if (code === "unavailable" || code === "not-found" || code === "failed-precondition" || /offline|does not exist|not found/i.test(msg)) {
+    return "Can't reach the Firestore database. Make sure it has been created: Firebase console → Firestore Database → Create database.";
+  }
+  return msg || "Unknown error.";
+}
+
+// Persistent error shown in the tree area (banners auto-hide or get replaced).
+function showDataError(prefix, err) {
+  console.error(err);
+  const text = `${prefix} ${describeDataError(err)}`;
+  showMessage(text, "error");
+  const box = $("tree");
+  box.textContent = "";
+  const p = document.createElement("p");
+  p.className = "empty error";
+  p.textContent = text;
+  if (err && err.code) {
+    const code = document.createElement("small");
+    code.textContent = ` (code: ${err.code})`;
+    p.appendChild(code);
+  }
+  box.appendChild(p);
+}
+
 function isOwnerView() {
   return state.user && state.treeId === state.user.uid;
 }
@@ -191,14 +221,27 @@ async function handleAuthChange(user) {
     ? `Relatives can add you with ${state.email} so you can see their tree.`
     : "Your social account didn't share an email, so trees others made for you can't be matched. Try another provider.";
 
+  $("add-person").hidden = true;
+  $("tree-title").textContent = "My family tree";
+  $("tree-subtitle").textContent = "";
+  $("tree").textContent = "Loading…";
+  state.trees = [{ id: user.uid, name: "My family tree", owned: true }];
+  renderTreeList();
+
   try {
     await ensureOwnTree(user);
-    await loadTreeList();
-    openTree(user.uid);
   } catch (err) {
-    console.error(err);
-    showMessage(`Could not load your data: ${err.message}`, "error");
+    showDataError("Couldn't set up your tree.", err);
+    return;
   }
+  try {
+    await loadTreeList();
+  } catch (err) {
+    // Still show the user's own tree; only the "trees I'm in" list failed.
+    console.error(err);
+    showMessage(`Couldn't load trees you were added to. ${describeDataError(err)}`, "error");
+  }
+  openTree(user.uid);
 }
 
 async function ensureOwnTree(user) {
@@ -288,9 +331,7 @@ function openTree(treeId) {
       draw();
     },
     (err) => {
-      console.error(err);
-      $("tree").textContent = "";
-      showMessage(`Could not load this tree: ${err.message}`, "error");
+      showDataError("Couldn't load this tree.", err);
     }
   );
 }
@@ -355,6 +396,10 @@ function showDetails(person) {
 
 // ---------- Add / edit ----------
 function openPersonDialog(person = null) {
+  if (!state.treeId) {
+    showMessage("Your tree hasn't loaded yet. See the message in the tree area.", "error");
+    return;
+  }
   if (!isOwnerView()) {
     showMessage("Only the owner of this tree can add people.", "error");
     return;
@@ -495,7 +540,7 @@ async function onSavePerson(event) {
     );
   } catch (err) {
     console.error(err);
-    formError(`Could not save: ${err.message}`);
+    formError(`Could not save. ${describeDataError(err)}`);
   } finally {
     saveBtn.disabled = false;
   }
@@ -524,6 +569,6 @@ async function onDeletePerson() {
     showMessage(`${person.name} removed.`, "success");
   } catch (err) {
     console.error(err);
-    showMessage(`Could not delete: ${err.message}`, "error");
+    showMessage(`Could not delete. ${describeDataError(err)}`, "error");
   }
 }
